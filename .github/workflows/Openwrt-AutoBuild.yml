@@ -10,8 +10,12 @@ name: Build OpenWrt
 
 on: 
   repository_dispatch:
+  push:
+    branches:
+      - master
 
 env:
+  SSH_ACTIONS: false
   REPO_TOKEN: ${{ secrets.REPO_TOKEN }}
   PPPOE_USERNAME: ${{ secrets.PPPOE_USERNAME }}
   PPPOE_PASSWD: ${{ secrets.PPPOE_PASSWD }}
@@ -159,17 +163,14 @@ jobs:
         if [ -n "$(ls -A "devices/${{matrix.target}}/patches" 2>/dev/null)" ]; then
           find "devices/${{matrix.target}}/patches" -type f -name '*.patch' ! -name '*.revert.patch' -print0 | sort -z | xargs -I % -t -0 -n 1 sh -c "cat '%'  | patch -d './' -p1 -E --forward --no-backup-if-mismatch"
         fi
-        
+        cp -Rf devices/package/gobinet ./package
+
     - name: Default PPPOE Setting
       if: env.PPPOE_USERNAME && env.PPPOE_PASSWD
       run: |
         sed -i '$i uci set network.wan.username=${{ env.PPPOE_USERNAME }}' openwrt/package/*/*/my-default-settings/files/uci.defaults
         sed -i '$i uci set network.wan.password=${{ env.PPPOE_PASSWD }}' openwrt/package/*/*/my-default-settings/files/uci.defaults
         sed -i '$i uci commit network' openwrt/package/*/*/my-default-settings/files/uci.defaults
-              
-    - name: SSH connection to Actions
-      uses: kiddin9/debugger-action@master
-      if: contains(github.event.action, 'ssh')
 
     - name: Download package
       id: package
@@ -184,6 +185,10 @@ jobs:
       with:
         ccache: 'true'
         prefix: ${{ github.workspace }}/openwrt
+  
+    - name: SSH connection to Actions
+      uses:  P3TERX/ssh2actions@main
+      if: env.SSH_ACTIONS == 'true'
 
     - name: Compile the firmware
       id: compile
