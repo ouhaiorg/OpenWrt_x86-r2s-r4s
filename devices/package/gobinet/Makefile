@@ -35,6 +35,7 @@ define Build/Prepare
 endef
 
 define Build/Compile
+        echo "sssssssssss"
 	$(MAKE) -C "$(LINUX_DIR)" $(MAKE_OPTS) modules
 endef
 
